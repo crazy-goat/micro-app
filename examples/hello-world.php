@@ -1,8 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-namespace Apps;
-
 require __DIR__.'/../vendor/autoload.php';
 
 use CrazyGoat\MicroApp\Attributes\Route;
