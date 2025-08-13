@@ -1,4 +1,20 @@
 {
+  "name": "crazy-goat/micro-app",
+  "description": "A lightweight php micro application framework",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Piotr Halas",
+      "email": "halaspiotr@gmail.com"
+    }
+  ],
+  "keywords": ["micro", "framework", "php", "lightweight", "workerman"],
+  "homepage": "https://github.com/crazy-goat/micro-app",
+  "support": {
+    "issues": "https://github.com/crazy-goat/micro-app/issues",
+    "source": "https://github.com/crazy-goat/micro-app"
+  },
   "require": {
     "php": "^8.1",
     "symfony/console": "^7.3",
@@ -24,5 +40,10 @@
       "vendor/bin/phpstan",
       "vendor/bin/rector process --dry-run"
     ]
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
   }
 }
