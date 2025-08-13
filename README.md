@@ -17,7 +17,7 @@ MicroApp is a minimalist PHP micro-backend framework built to run on top of the 
 - PHP 8.1+
 - [Workerman](https://github.com/walkor/Workerman)
   [Symfony Console](https://symfony.com/doc/current/components/console.html)
-- [FastRoute](https://github.com/nikic/FastRoute) [ Optional
+- [FastRoute](https://github.com/nikic/FastRoute)
 ### Installation
 
 Install MicroApp via Composer:
