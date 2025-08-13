@@ -1,6 +1,6 @@
 {
   "name": "crazy-goat/micro-app",
-  "description": "A lightweight php micro application framework",
+  "description": "A lightweight micro PHP application framework",
   "type": "library",
   "license": "MIT",
   "authors": [
