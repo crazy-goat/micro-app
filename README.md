@@ -68,12 +68,15 @@ php myapp.php server start --listen=127.0.0.1 --port=8081
 
 ## Configuration Options
 
-| Option         | Description                          | Default   |
-|----------------|--------------------------------------|-----------|
-| `--port`       | Port to listen on                    | `8080`    |
-| `--listen`     | Interface/address to bind            | `0.0.0.0` |
-| `--workers`    | Number of PHP worker processes       | `4`       |
-| `--reuse_port` | Use SO_REUSEPORT if available        | `false`   |
+| Option                  | Description                                                 | Default   |
+|-------------------------|-------------------------------------------------------------|-----------|
+| `--port`                | Port to listen on                                           | `8080`    |
+| `--listen`              | Interface/address to bind                                   | `0.0.0.0` |
+| `--workers`             | Number of PHP worker processes                              | `4`       |
+| `--reuse_port`          | Use SO_REUSEPORT if available                               | `false`   |
+| `--dev`                 | Reload server every request. Use for development            | `false`   |
+| `--max-reques`          | Reload server N request. Use this if you have memory leaks. | `null`    |
+| `--reload-on-exception` | If exception appears in code, reload worker.                | `false`   |
 
 ## Server commands
 
