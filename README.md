@@ -63,7 +63,7 @@ class HelloWorldController
 Example:
 
 ```bash
-php myapp.php server:start --listen=127.0.0.1 --port=8081
+php myapp.php server start --listen=127.0.0.1 --port=8081
 ```
 
 ## Configuration Options
@@ -74,6 +74,15 @@ php myapp.php server:start --listen=127.0.0.1 --port=8081
 | `--listen`     | Interface/address to bind            | `0.0.0.0` |
 | `--workers`    | Number of PHP worker processes       | `4`       |
 | `--reuse_port` | Use SO_REUSEPORT if available        | `false`   |
+
+## Server commands
+
+- `server start` - Start the server
+- `server stop` - Stop the server
+- `server restart` - Restart the server
+- `server reload` - Reload the server
+- `server status` - Show the server status
+- `server connections` - Show the server connections
 
 ## License
 

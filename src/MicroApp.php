@@ -8,6 +8,7 @@ use CrazyGoat\MicroApp\Attributes\Route;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 
+use Symfony\Component\Console\Input\InputArgument;
 use function FastRoute\simpleDispatcher;
 
 use ReflectionClass;
@@ -22,7 +23,7 @@ use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 use Workerman\Worker;
 
-#[AsCommand(name: 'server:start', description: 'Hello World application')]
+#[AsCommand(name: 'server', description: 'Hello World application')]
 class MicroApp extends Command
 {
     private const DEFAULT_LISTEN = '0.0.0.0';
@@ -53,6 +54,8 @@ class MicroApp extends Command
 
     protected function configure(): void
     {
+        $this->addArgument('server_command', InputArgument::REQUIRED, 'The command to execute [connections, start, status, stop, restart, reload]');
+
         $this->addOption('port', 'p', InputOption::VALUE_REQUIRED, 'Port to listen', self::DEFAULT_PORT);
         $this->addOption('reuse_port', 'R', InputOption::VALUE_NONE, 'Use SO_REUSEPORT if available');
         $this->addOption('listen', 'l', InputOption::VALUE_REQUIRED, 'Listen to listen', self::DEFAULT_LISTEN);
@@ -77,7 +80,7 @@ class MicroApp extends Command
         $worker->onMessage = $this->onMessage(...);
         $worker->reusePort = boolval($input->getOption('reuse_port'));
 
-        Worker::$command = 'start';
+        Worker::$command = $input->getArgument('server_command');
         Worker::runAll();
 
         return self::SUCCESS;
