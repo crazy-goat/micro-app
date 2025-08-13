@@ -29,13 +29,14 @@ class MicroApp extends Command
     private const DEFAULT_LISTEN = '0.0.0.0';
     private const DEFAULT_PORT = 8080;
     private const DEFAULT_WORKER_COUNT = 4;
-    private const DEFAULT_MAX_REQUEST = 1000;
 
     /** @var object[] */
     protected array $controllers = [];
     private Dispatcher $dispatcher;
     private bool $dev = false;
     private ?int $maxRequest = null;
+    private bool $needReload = false;
+    private bool $reloadOnException = false;
 
     public function withController(object $controller): self
     {
@@ -65,7 +66,8 @@ class MicroApp extends Command
         $this->addOption('workers', 'w', InputOption::VALUE_REQUIRED, 'Number of workers to run', self::DEFAULT_WORKER_COUNT);
 
         $this->addOption('dev', 'd', InputOption::VALUE_NONE, 'Restart every request');
-        $this->addOption('max-request', 'm', InputOption::VALUE_REQUIRED, 'Restart every N request', );
+        $this->addOption('max-request', 'm', InputOption::VALUE_REQUIRED, 'Restart every N request');
+        $this->addOption('reload-on-exception', 'r', InputOption::VALUE_NONE, 'Restart on exception');
         parent::configure();
     }
 
@@ -82,7 +84,8 @@ class MicroApp extends Command
         );
 
         $this->dev = boolval($input->getOption('dev'));
-        $this->maxRequest = $input->getOption('max-request') === null ? null : intval($input->getOption('max-request'));;
+        $this->maxRequest = $input->getOption('max-request') === null ? null : intval($input->getOption('max-request'));
+        $this->reloadOnException = boolval($input->getOption('reload-on-exception'));
 
         $worker->name = $this->getName() ?? 'MicroApp';
         $worker->count = intval($input->getOption('workers'));
@@ -140,6 +143,9 @@ class MicroApp extends Command
                     $response = call_user_func_array($handler, [$request]);
                 } catch (\Throwable $exception) {
                     $response->withStatus(500)->withBody($this->dev ? $exception->getMessage() : Response::PHRASES[500]);
+                    if ($this->reloadOnException) {
+                        $this->needReload = true;
+                    }
                 }
                 break;
         }
@@ -157,7 +163,7 @@ class MicroApp extends Command
 
     private function needReload(): bool
     {
-        if ($this->dev) {
+        if ($this->dev || $this->needReload) {
             return true;
         }
 
