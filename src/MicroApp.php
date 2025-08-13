@@ -29,10 +29,13 @@ class MicroApp extends Command
     private const DEFAULT_LISTEN = '0.0.0.0';
     private const DEFAULT_PORT = 8080;
     private const DEFAULT_WORKER_COUNT = 4;
+    private const DEFAULT_MAX_REQUEST = 1000;
 
     /** @var object[] */
     protected array $controllers = [];
     private Dispatcher $dispatcher;
+    private bool $dev = false;
+    private ?int $maxRequest = null;
 
     public function withController(object $controller): self
     {
@@ -61,6 +64,8 @@ class MicroApp extends Command
         $this->addOption('listen', 'l', InputOption::VALUE_REQUIRED, 'Listen to listen', self::DEFAULT_LISTEN);
         $this->addOption('workers', 'w', InputOption::VALUE_REQUIRED, 'Number of workers to run', self::DEFAULT_WORKER_COUNT);
 
+        $this->addOption('dev', 'd', InputOption::VALUE_NONE, 'Restart every request');
+        $this->addOption('max-request', 'm', InputOption::VALUE_REQUIRED, 'Restart every N request', );
         parent::configure();
     }
 
@@ -75,6 +80,10 @@ class MicroApp extends Command
         $worker = new Worker(
             sprintf("http://%s:%d", $input->getOption('listen'), $input->getOption('port')),
         );
+
+        $this->dev = boolval($input->getOption('dev'));
+        $this->maxRequest = $input->getOption('max-request') === null ? null : intval($input->getOption('max-request'));;
+
         $worker->name = $this->getName() ?? 'MicroApp';
         $worker->count = intval($input->getOption('workers'));
         $worker->onMessage = $this->onMessage(...);
@@ -123,14 +132,43 @@ class MicroApp extends Command
                     );
                 break;
             case Dispatcher::FOUND:
-                $request->context['arguments'] = $vars;
-                if (is_callable($handler)) {
+                try {
+                    $request->context['arguments'] = $vars;
+                    if (!is_callable($handler)) {
+                        throw new \RuntimeException('Handler is not callable');
+                    }
                     $response = call_user_func_array($handler, [$request]);
-                } else {
-                    $response->withStatus(500)->withBody(Response::PHRASES[500]);
+                } catch (\Throwable $exception) {
+                    $response->withStatus(500)->withBody($this->dev ? $exception->getMessage() : Response::PHRASES[500]);
                 }
                 break;
         }
         $connection->send($response);
+
+        if ($this->needReload()) {
+            $this->reload();
+        }
+    }
+
+    private function reload(bool $all = false): void
+    {
+        posix_kill($all ? posix_getppid() : posix_getpid(), SIGUSR1);
+    }
+
+    private function needReload(): bool
+    {
+        if ($this->dev) {
+            return true;
+        }
+
+        if ($this->maxRequest !== null) {
+            $this->maxRequest--;
+
+            if ($this->maxRequest <= 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
