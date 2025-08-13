@@ -15,6 +15,12 @@ class HelloWorldController
     {
         return new Response(body:'Hello World');
     }
+
+    #[Route(pattern: '/hello/{name}')]
+    public function hello(Request $request): Response
+    {
+        return new Response(body:'Hello '.$request->context['arguments']['name']);
+    }
 }
 
 (new MicroApp())
