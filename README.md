@@ -28,49 +28,41 @@ composer require crazy-goat/micro-app
 
 ### Creating a Micro-Backend
 
-1. **Create a Symfony Console Command that extends `MicroApp`:**
+1. **Create a Symfony Application using `MicroApp`:**
 
-```php
-namespace Apps;
+```php 
+<?php 
+# myapp.php
+require __DIR__.'/../vendor/autoload.php';
 
+use CrazyGoat\MicroApp\Attributes\Route;
 use CrazyGoat\MicroApp\MicroApp;
 use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
-use CrazyGoat\MicroApp\Attributes\Route;
 
-#[AsCommand(name: 'my-micro-backend', description: 'Hello World application')]
-class MyMicroBackend extends MicroApp
+class HelloWorldController
 {
-    #[Route('GET', '/hello')]
-    public function hello(Request $request): Response
+    #[Route]
+    public function handle(Request $request): Response
     {
-        return new Response(200, [], 'Hello, world!');
+        return new Response(body:'Hello World');
     }
 }
-```
 
-- Your command **must** have at least one function with the `#[Route]` attribute.
+(new MicroApp())
+        ->withController(new HelloWorldController())
+        ->getApplication()
+        ->run();
+```
+- Your controller **must** have at least one function with the `#[Route]` attribute.
 - Each route function **must** accept a `Request` and return a `Response`.
 
-2. **Create a Symfony Application and register your command:**
-
-```php
-#myapp.php
-namespace Apps;
-
-require __DIR__.'/../vendor/autoload.php';
-
-use Symfony\Component\Console\Application;
-$application = new Application();
-application->add(new MyMicroBackend());
-$application->run();
-```
-3. **Run your application:**
+2. **Run your application:**
 
 Example:
 
 ```bash
-php myapp.php my-micro-backend --listen=127.0.0.1 --port=8081
+php myapp.php server:start --listen=127.0.0.1 --port=8081
 ```
 
 ## Configuration Options
