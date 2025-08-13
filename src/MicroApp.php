@@ -23,12 +23,11 @@ use function FastRoute\simpleDispatcher;
 #[AsCommand(name: 'server:start', description: 'Hello World application')]
 class MicroApp extends Command
 {
+    private const DEFAULT_LISTEN = '0.0.0.0';
+    private const DEFAULT_PORT = 8080;
+    private const DEFAULT_WORKER_COUNT = 4;
+
     protected array $controllers = [];
-
-    protected int $workerCount = 4;
-    protected string $listen = '0.0.0.0';
-
-    protected int $port = 8081;
     private Dispatcher $dispatcher;
 
     public function withController(object $controller): self
@@ -51,10 +50,10 @@ class MicroApp extends Command
 
     protected function configure(): void
     {
-        $this->addOption('port', 'p', InputOption::VALUE_REQUIRED, 'Port to listen', $this->port);
+        $this->addOption('port', 'p', InputOption::VALUE_REQUIRED, 'Port to listen', self::DEFAULT_PORT);
         $this->addOption('reuse_port', 'R', InputOption::VALUE_NONE, 'Use SO_REUSEPORT if available');
-        $this->addOption('listen', 'l', InputOption::VALUE_REQUIRED, 'Listen to listen', $this->listen);
-        $this->addOption('workers', 'w', InputOption::VALUE_REQUIRED, 'Number of workers to run', $this->workerCount);
+        $this->addOption('listen', 'l', InputOption::VALUE_REQUIRED, 'Listen to listen', self::DEFAULT_LISTEN);
+        $this->addOption('workers', 'w', InputOption::VALUE_REQUIRED, 'Number of workers to run', self::DEFAULT_WORKER_COUNT);
 
         parent::configure();
     }

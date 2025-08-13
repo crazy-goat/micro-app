@@ -67,12 +67,12 @@ php myapp.php server:start --listen=127.0.0.1 --port=8081
 
 ## Configuration Options
 
-| Option         | Description                          | Default    |
-|----------------|--------------------------------------|------------|
-| `--port`       | Port to listen on                    | `8081`     |
-| `--listen`     | Interface/address to bind            | `0.0.0.0`  |
-| `--workers`    | Number of PHP worker processes       | `4`        |
-| `--reuse_port` | Use SO_REUSEPORT if available        | `true`     |
+| Option         | Description                          | Default   |
+|----------------|--------------------------------------|-----------|
+| `--port`       | Port to listen on                    | `8080`    |
+| `--listen`     | Interface/address to bind            | `0.0.0.0` |
+| `--workers`    | Number of PHP worker processes       | `4`       |
+| `--reuse_port` | Use SO_REUSEPORT if available        | `false`   |
 
 ## License
 
