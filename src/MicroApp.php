@@ -1,11 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace CrazyGoat\MicroApp;
 
-use FastRoute\ConfigureRoutes;
 use CrazyGoat\MicroApp\Attributes\Route;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
+
+use function FastRoute\simpleDispatcher;
+
 use ReflectionClass;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -18,8 +22,6 @@ use Workerman\Protocols\Http\Request;
 use Workerman\Protocols\Http\Response;
 use Workerman\Worker;
 
-use function FastRoute\simpleDispatcher;
-
 #[AsCommand(name: 'server:start', description: 'Hello World application')]
 class MicroApp extends Command
 {
@@ -27,6 +29,7 @@ class MicroApp extends Command
     private const DEFAULT_PORT = 8080;
     private const DEFAULT_WORKER_COUNT = 4;
 
+    /** @var object[] */
     protected array $controllers = [];
     private Dispatcher $dispatcher;
 
@@ -39,7 +42,7 @@ class MicroApp extends Command
 
     public function getApplication(): ?Application
     {
-        if (parent::getApplication() === null) {
+        if (!parent::getApplication() instanceof Application) {
             $app = new Application();
             $app->add($this);
             $this->setApplication($app);
@@ -67,11 +70,11 @@ class MicroApp extends Command
     {
         $this->dispatcher = $this->getDispatcher();
         $worker = new Worker(
-            sprintf("http://%s:%d", $input->getOption('listen'), $input->getOption('port'))
+            sprintf("http://%s:%d", $input->getOption('listen'), $input->getOption('port')),
         );
         $worker->name = $this->getName() ?? 'MicroApp';
-        $worker->count = $input->getOption('workers');
-        $worker->onMessage = [$this, 'onMessage'];
+        $worker->count = intval($input->getOption('workers'));
+        $worker->onMessage = $this->onMessage(...);
         $worker->reusePort = boolval($input->getOption('reuse_port'));
 
         Worker::$command = 'start';
@@ -82,7 +85,7 @@ class MicroApp extends Command
 
     private function getDispatcher(): Dispatcher
     {
-        return simpleDispatcher(function (RouteCollector $r) {
+        return simpleDispatcher(function (RouteCollector $r): void {
             foreach ($this->controllers as $controller) {
                 $class = new ReflectionClass($controller);
                 foreach ($class->getMethods() as $method) {
@@ -100,8 +103,8 @@ class MicroApp extends Command
     {
         $response = new Response();
         $routeInfo = $this->dispatcher->dispatch($request->method(), $request->uri());
-        [$method, $handler, $vars] = $routeInfo;
-        switch ($method) {
+        [$matchResult, $handler, $vars] = $routeInfo;
+        switch ($matchResult) {
             case Dispatcher::NOT_FOUND:
                 $response->withStatus(404)->withBody(Response::PHRASES[404]);
                 break;
@@ -109,15 +112,20 @@ class MicroApp extends Command
                 $allowedMethods = $routeInfo[1];
                 $response->withStatus(405)
                     ->withBody(
-                        sprintf("%s Allowed methods: %s",
+                        sprintf(
+                            "%s Allowed methods: %s",
                             Response::PHRASES[405],
-                            implode(', ', $allowedMethods))
+                            implode(', ', $allowedMethods),
+                        ),
                     );
                 break;
             case Dispatcher::FOUND:
-                [$controller, $method] = $handler;
                 $request->context['arguments'] = $vars;
-                $response = call_user_func_array([$controller, $method], [$request]);
+                if (is_callable($handler)) {
+                    $response = call_user_func_array($handler, [$request]);
+                } else {
+                    $response->withStatus(500)->withBody(Response::PHRASES[500]);
+                }
                 break;
         }
         $connection->send($response);

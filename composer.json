@@ -9,5 +9,20 @@
       "CrazyGoat\\MicroApp\\": "src",
       "Apps\\": "apps"
     }
+  },
+  "require-dev": {
+    "rector/rector": "^2.1",
+    "php-cs-fixer/shim": "^3.85"
+  },
+  "scripts": {
+    "lint-fix": [
+      "vendor/bin/php-cs-fixer fix -v",
+      "vendor/bin/rector process"
+    ],
+    "lint": [
+      "PHP_CS_FIXER_IGNORE_ENV=1 vendor/bin/php-cs-fixer fix -v --dry-run",
+      "vendor/bin/phpstan",
+      "vendor/bin/rector process --dry-run"
+    ]
   }
 }
