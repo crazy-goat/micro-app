@@ -17,6 +17,7 @@
   },
   "require": {
     "php": "^8.1",
+    "ext-pcntl": "*",
     "ext-posix": "*",
     "symfony/console": "^7.3",
     "nikic/fast-route": "^1.3",

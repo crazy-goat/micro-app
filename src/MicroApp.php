@@ -145,6 +145,8 @@ class MicroApp extends Command
                     $response->withStatus(500)->withBody($this->dev ? $exception->getMessage() : Response::PHRASES[500]);
                     if ($this->reloadOnException) {
                         $this->needReload = true;
+                    } else {
+                        throw $exception;
                     }
                 }
                 break;
@@ -158,7 +160,8 @@ class MicroApp extends Command
 
     private function reload(bool $all = false): void
     {
-        posix_kill($all ? posix_getppid() : posix_getpid(), SIGUSR1);
+        Worker::log('Reloading '.($all ? 'all workers' : 'single worker'));
+        posix_kill($all ? posix_getppid() : posix_getpid(), SIGUSR2);
     }
 
     private function needReload(): bool
