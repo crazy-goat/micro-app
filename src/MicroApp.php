@@ -7,6 +7,8 @@ use CrazyGoat\MicroApp\Attributes\Route;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 use ReflectionClass;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -18,14 +20,34 @@ use Workerman\Worker;
 
 use function FastRoute\simpleDispatcher;
 
+#[AsCommand(name: 'server:start', description: 'Hello World application')]
 class MicroApp extends Command
 {
-    protected bool $reusePort = true;
+    protected array $controllers = [];
+
     protected int $workerCount = 4;
     protected string $listen = '0.0.0.0';
 
     protected int $port = 8081;
     private Dispatcher $dispatcher;
+
+    public function withController(object $controller): self
+    {
+        $this->controllers[] = $controller;
+
+        return $this;
+    }
+
+    public function getApplication(): ?Application
+    {
+        if (parent::getApplication() === null) {
+            $app = new Application();
+            $app->add($this);
+            $this->setApplication($app);
+        }
+
+        return parent::getApplication();
+    }
 
     protected function configure(): void
     {
@@ -61,13 +83,15 @@ class MicroApp extends Command
 
     private function getDispatcher(): Dispatcher
     {
-        return simpleDispatcher(static function (RouteCollector $r) {
-            $class = new ReflectionClass(static::class);
-            foreach ($class->getMethods() as $method) {
-                $attrs = $method->getAttributes(Route::class);
-                foreach ($attrs as $attr) {
-                    $instance = $attr->newInstance();
-                    $r->addRoute($instance->methods, $instance->pattern, $method->getName());
+        return simpleDispatcher(function (RouteCollector $r) {
+            foreach ($this->controllers as $controller) {
+                $class = new ReflectionClass($controller);
+                foreach ($class->getMethods() as $method) {
+                    $attrs = $method->getAttributes(Route::class);
+                    foreach ($attrs as $attr) {
+                        $instance = $attr->newInstance();
+                        $r->addRoute($instance->methods, $instance->pattern, [$controller, $method->getName()]);
+                    }
                 }
             }
         });
@@ -77,7 +101,8 @@ class MicroApp extends Command
     {
         $response = new Response();
         $routeInfo = $this->dispatcher->dispatch($request->method(), $request->uri());
-        switch ($routeInfo[0]) {
+        [$method, $handler, $vars] = $routeInfo;
+        switch ($method) {
             case Dispatcher::NOT_FOUND:
                 $response->withStatus(404)->withBody(Response::PHRASES[404]);
                 break;
@@ -91,10 +116,9 @@ class MicroApp extends Command
                     );
                 break;
             case Dispatcher::FOUND:
-                $handler = $routeInfo[1];
-                $vars = $routeInfo[2];
+                [$controller, $method] = $handler;
                 $request->context['arguments'] = $vars;
-                $response = call_user_func_array([$this, $handler], [$request]);
+                $response = call_user_func_array([$controller, $method], [$request]);
                 break;
         }
         $connection->send($response);
