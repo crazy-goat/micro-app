@@ -160,7 +160,7 @@ class MicroApp extends Command
 
     private function reload(bool $all = false): void
     {
-        Worker::log('Reloading '.($all ? 'all workers' : 'single worker'));
+        Worker::log('Reloading ' . ($all ? 'all workers' : 'single worker'));
         posix_kill($all ? posix_getppid() : posix_getpid(), SIGUSR2);
     }
 
