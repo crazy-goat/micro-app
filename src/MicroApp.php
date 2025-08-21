@@ -114,27 +114,21 @@ class MicroApp extends Command
         });
     }
 
+    /** @throws \Throwable */
     final public function onMessage(TcpConnection $connection, Request $request): void
     {
-        $response = new Response();
         $routeInfo = $this->dispatcher->dispatch($request->method(), $request->uri());
-        [$matchResult, $handler, $vars] = $routeInfo;
-        switch ($matchResult) {
+        switch ($routeInfo[0] ?? null) {
+            default:
             case Dispatcher::NOT_FOUND:
-                $response->withStatus(404)->withBody(Response::PHRASES[404]);
+                $response = $this->returnError(404);
                 break;
             case Dispatcher::METHOD_NOT_ALLOWED:
-                $allowedMethods = $routeInfo[1];
-                $response->withStatus(405)
-                    ->withBody(
-                        sprintf(
-                            "%s Allowed methods: %s",
-                            Response::PHRASES[405],
-                            implode(', ', $allowedMethods),
-                        ),
-                    );
+                $response = $this->returnError(405, sprintf("%s Allowed methods: %s", Response::PHRASES[405], implode(', ', $routeInfo[1])));
                 break;
             case Dispatcher::FOUND:
+                $handler = $routeInfo[1] ?? null;
+                $vars = $routeInfo[2] ?? [];
                 try {
                     $request->context['arguments'] = $vars;
                     if (!is_callable($handler)) {
@@ -142,7 +136,7 @@ class MicroApp extends Command
                     }
                     $response = call_user_func_array($handler, [$request]);
                 } catch (\Throwable $exception) {
-                    $response->withStatus(500)->withBody($this->dev ? $exception->getMessage() : Response::PHRASES[500]);
+                    $response = $this->returnError(500, $this->dev ? $exception->getMessage() : null);
                     if ($this->reloadOnException) {
                         $this->needReload = true;
                     } else {
@@ -179,5 +173,10 @@ class MicroApp extends Command
         }
 
         return false;
+    }
+
+    private function returnError(int $statusCode, ?string $message = null): Response
+    {
+        return new Response($statusCode, ['Content-Type' => 'text/plain'], $message ?? Response::PHRASES[$statusCode]);
     }
 }
