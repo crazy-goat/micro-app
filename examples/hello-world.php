@@ -19,7 +19,7 @@ class HelloWorldController
     #[Route(pattern: '/hello/{name}')]
     public function hello(Request $request): Response
     {
-        return new Response(body:'Hello '.$request->context['arguments']['name']);
+        return new Response(body:'Hello '.$request->context['router']['arguments']['name']);
     }
 }
 

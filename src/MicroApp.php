@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace CrazyGoat\MicroApp;
 
 use CrazyGoat\MicroApp\Attributes\Route;
+use CrazyGoat\MicroApp\Exceptions\HttpException;
+use CrazyGoat\MicroApp\Middlewares\MiddlewareInterface;
+use CrazyGoat\MicroApp\Middlewares\RouterMiddleware;
 use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 
@@ -32,15 +35,37 @@ class MicroApp extends Command
 
     /** @var object[] */
     protected array $controllers = [];
-    private Dispatcher $dispatcher;
+    /** @var callable[] */
+    private array $middlewares = [];
+
     private bool $dev = false;
     private ?int $maxRequest = null;
     private bool $needReload = false;
     private bool $reloadOnException = false;
+    private readonly RouterMiddleware $router;
+
+    public function __construct()
+    {
+        $this->router = new RouterMiddleware();
+        $this->withMiddleware($this->router, 1000);
+        parent::__construct();
+    }
 
     public function withController(object $controller): self
     {
         $this->controllers[] = $controller;
+
+        return $this;
+    }
+
+    public function withMiddleware(MiddlewareInterface $middleware, int $position): self
+    {
+        if (isset($this->middlewares[$position])) {
+            throw new \InvalidArgumentException('Middleware position ' . $position . ' already exists');
+        }
+
+        $this->middlewares[$position] = $middleware;
+
 
         return $this;
     }
@@ -78,10 +103,8 @@ class MicroApp extends Command
 
     protected function serve(InputInterface $input, OutputInterface $output): int
     {
-        $this->dispatcher = $this->getDispatcher();
-        $worker = new Worker(
-            sprintf("http://%s:%d", $input->getOption('listen'), $input->getOption('port')),
-        );
+        $this->router->withDispatcher($this->getDispatcher());
+        $worker = new Worker(sprintf("http://%s:%d", $input->getOption('listen'), $input->getOption('port')));
 
         $this->dev = boolval($input->getOption('dev'));
         $this->maxRequest = $input->getOption('max-request') === null ? null : intval($input->getOption('max-request'));
@@ -117,39 +140,48 @@ class MicroApp extends Command
     /** @throws \Throwable */
     final public function onMessage(TcpConnection $connection, Request $request): void
     {
-        $routeInfo = $this->dispatcher->dispatch($request->method(), $request->uri());
-        switch ($routeInfo[0] ?? null) {
-            default:
-            case Dispatcher::NOT_FOUND:
-                $response = $this->returnError(404);
-                break;
-            case Dispatcher::METHOD_NOT_ALLOWED:
-                $response = $this->returnError(405, sprintf("%s Allowed methods: %s", Response::PHRASES[405], implode(', ', $routeInfo[1])));
-                break;
-            case Dispatcher::FOUND:
-                $handler = $routeInfo[1] ?? null;
-                $vars = $routeInfo[2] ?? [];
-                try {
-                    $request->context['arguments'] = $vars;
-                    if (!is_callable($handler)) {
-                        throw new \RuntimeException('Handler is not callable');
-                    }
-                    $response = call_user_func_array($handler, [$request]);
-                } catch (\Throwable $exception) {
-                    $response = $this->returnError(500, $this->dev ? $exception->getMessage() : null);
-                    if ($this->reloadOnException) {
-                        $this->needReload = true;
-                    } else {
-                        throw $exception;
-                    }
-                }
-                break;
+        try {
+            $next = $this->controller(...);
+            foreach (array_reverse($this->middlewares) as $middleware) {
+                $next = fn(Request $input): Response => $middleware($request, $next);
+            }
+            $response = $next($request);
+        } catch (HttpException $exception) {
+            $response = $this->returnError($exception->getCode(), $exception->getMessage());
+        } catch (\Throwable $exception) {
+            $response = $this->returnError(500, $this->dev ? $exception->getMessage() : null);
+            if ($this->reloadOnException) {
+                $this->needReload = true;
+            } else {
+                throw $exception;
+            }
         }
-        $connection->send($response);
 
+        $connection->send($response);
         if ($this->needReload()) {
             $this->reload();
         }
+    }
+
+    /** @throws \Throwable */
+    private function controller(Request $request): Response
+    {
+        try {
+            $handler = $request->context['router']['handler'];
+            if (!is_callable($handler)) {
+                throw new \RuntimeException('Handler is not callable');
+            }
+            $response = call_user_func_array($handler, [$request]);
+        } catch (\Throwable $exception) {
+            $response = $this->returnError(500, $this->dev ? $exception->getMessage() : null);
+            if ($this->reloadOnException) {
+                $this->needReload = true;
+            } else {
+                throw $exception;
+            }
+        }
+
+        return $response;
     }
 
     private function reload(bool $all = false): void
