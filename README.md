@@ -89,6 +89,21 @@ php myapp.php server start --listen=127.0.0.1 --port=8081
 - `server status` - Show the server status
 - `server connections` - Show the server connections
 
+### Routing
+To register a route, you must use the `#[Route]` attribute. You can provide HTTP method(s) (e.g., `GET`, `POST`) and a path.
+These parameters are directly passed to the `nikic/FastRoute`'s `addRoute` method, allowing you to define flexible and powerful routing rules.
+
+```php
+## examples
+// register route to / with GET method
+#[Route] 
+
+// register the route to /hello/{name} with the GET method.
+#[Route(pattern: '/hello/{name}')]  
+```
+
+Accessing the route parameters is as simple as accessing the `$request->context['router']['arguments']['name']` array.
+
 ## Event Dispatcher
 
 MicroApp includes a simple Event Dispatcher that allows you to hook into various lifecycle events of the application. 
