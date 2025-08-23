@@ -43,9 +43,11 @@ class MicroApp extends Command
     private bool $needReload = false;
     private bool $reloadOnException = false;
     private readonly RouterMiddleware $router;
+    private readonly EventDispatcher $dispatcher;
 
     public function __construct()
     {
+        $this->dispatcher = new EventDispatcher();
         $this->router = new RouterMiddleware();
         $this->withMiddleware($this->router, 1000);
         parent::__construct();
@@ -66,6 +68,13 @@ class MicroApp extends Command
 
         $this->middlewares[$position] = $middleware;
 
+
+        return $this;
+    }
+
+    public function onEvent(string $event, callable $callback): self
+    {
+        $this->dispatcher->on($event, $callback);
 
         return $this;
     }
@@ -103,8 +112,10 @@ class MicroApp extends Command
 
     protected function serve(InputInterface $input, OutputInterface $output): int
     {
-        $this->router->withDispatcher($this->getDispatcher());
+        $this->router->withDispatcher($this->getRouter());
         $worker = new Worker(sprintf("http://%s:%d", $input->getOption('listen'), $input->getOption('port')));
+
+        $this->dispatcher->dispatch('onServerStart', $worker);
 
         $this->dev = boolval($input->getOption('dev'));
         $this->maxRequest = $input->getOption('max-request') === null ? null : intval($input->getOption('max-request'));
@@ -113,6 +124,10 @@ class MicroApp extends Command
         $worker->name = $this->getName() ?? 'MicroApp';
         $worker->count = intval($input->getOption('workers'));
         $worker->onMessage = $this->onMessage(...);
+        $worker->onWorkerStart = $this->onWorkerStart(...);
+        $worker->onWorkerReload = $this->onWorkerReload(...);
+        $worker->onConnect = $this->onConnect(...);
+        $worker->onClose = $this->onClose(...);
         $worker->reusePort = boolval($input->getOption('reuse_port'));
 
         Worker::$command = $input->getArgument('server_command');
@@ -121,7 +136,7 @@ class MicroApp extends Command
         return self::SUCCESS;
     }
 
-    private function getDispatcher(): Dispatcher
+    private function getRouter(): Dispatcher
     {
         return simpleDispatcher(function (RouteCollector $r): void {
             foreach ($this->controllers as $controller) {
@@ -138,11 +153,13 @@ class MicroApp extends Command
     }
 
     /** @throws \Throwable */
-    final public function onMessage(TcpConnection $connection, Request $request): void
+    private function onMessage(TcpConnection $connection, Request $request): void
     {
+        $this->dispatcher->dispatch('onMessage', $connection, $request);
+
         try {
             $next = $this->controller(...);
-            foreach (array_reverse($this->middlewares) as $middleware) {
+            foreach ($this->middlewares as $middleware) {
                 $next = fn(Request $input): Response => $middleware($request, $next);
             }
             $response = $next($request);
@@ -161,6 +178,26 @@ class MicroApp extends Command
         if ($this->needReload()) {
             $this->reload();
         }
+    }
+
+    private function onWorkerStart(Worker $worker): void
+    {
+        $this->dispatcher->dispatch('onWorkerStart', $worker);
+    }
+
+    private function onConnect(TcpConnection $connection): void
+    {
+        $this->dispatcher->dispatch('onConnect', $connection);
+    }
+
+    private function onClose(TcpConnection $connection): void
+    {
+        $this->dispatcher->dispatch('onClose', $connection);
+    }
+
+    private function onWorkerReload(Worker $worker): void
+    {
+        $this->dispatcher->dispatch('onWorkerReload', $worker);
     }
 
     /** @throws \Throwable */
