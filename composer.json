@@ -29,8 +29,9 @@
     }
   },
   "require-dev": {
+    "php-cs-fixer/shim": "^3.85",
     "rector/rector": "^2.1",
-    "php-cs-fixer/shim": "^3.85"
+    "workerman/globaldata": "^1.0"
   },
   "scripts": {
     "lint-fix": [
