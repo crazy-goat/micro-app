@@ -87,6 +87,36 @@ php myapp.php server start --listen=127.0.0.1 --port=8081
 - `server status` - Show the server status
 - `server connections` - Show the server connections
 
+## Event Dispatcher
+
+MicroApp includes a simple Event Dispatcher that allows you to hook into various lifecycle events of the application. You can register listeners using the `onEvent()` method on your `MicroApp` instance.
+
+### Available Events
+
+| Event Name        | Parameters                                                            |
+|-------------------|-----------------------------------------------------------------------|
+| `onServerStart`   | `Worker $worker`                                                      |
+| `onMessage`       | `TcpConnection $connection`, `Request $request`                       |
+| `onResponse`      | `TcpConnection $connection`, `Request $request`, `Response $response` |
+| `onWorkerStart`   | `Worker $worker`                                                      |
+| `onConnect`       | `TcpConnection $connection`                                           |
+| `onClose`         | `TcpConnection $connection`                                           |
+| `onWorkerReload`  | `Worker $worker`                                                      |
+
+### Example
+
+```php
+<?php
+
+(new MicroApp())
+        ->withController(new HelloWorldController())
+        ->onEvent('onConnect', function (TcpConnection $connection) {
+            echo "Client connected from {" . $connection->getRemoteIp() . ":" . $connection->getRemotePort() . "}\n";
+        })
+        ->getApplication()
+        ->run();
+```
+
 ## License
 
 MIT
