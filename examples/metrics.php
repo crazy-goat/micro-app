@@ -18,7 +18,10 @@ class MetricsMiddleware implements MiddlewareInterface
         if ($this->metrics === null) {
             return $next($request);
         }
-        $start = microtime(true);
+
+        $request->context['metrics']['start'] = microtime(true);
+        $this->metrics->increment('total_requests');
+
         if ($request->method() === 'GET' && $request->uri() === '/metrics') {
             $response = new Response(200, [
                 'Content-Type' => 'text/plain'
@@ -36,10 +39,6 @@ class MetricsMiddleware implements MiddlewareInterface
             /** @var Response $response */
             $response = $next($request);
         }
-        $end = microtime(true);
-
-        $this->metrics->increment('total_requests');
-        $this->metrics->increment('total_response_time', $end - $start);
 
         return $response;
     }
@@ -66,6 +65,15 @@ class MetricsMiddleware implements MiddlewareInterface
         $this->metrics->increment('active_connections', -1);
     }
 
+    public function addTime(?float $start): void
+    {
+        if ($start === null) {
+            return;
+        }
+
+        $this->metrics->increment('total_response_time', microtime(true) - $start);
+    }
+
 }
 
 class HelloWorldController
@@ -86,5 +94,6 @@ $metrics = new MetricsMiddleware();
         ->onEvent('onWorkerStart', fn() => $metrics->startMetrics())
         ->onEvent('onConnect', fn() => $metrics->connection())
         ->onEvent('onClose', fn() => $metrics->connectionClose())
+        ->onEvent('onResponse', fn($connection, $request) => $metrics->addTime($request->context['metrics']['start'] ?? null))
         ->getApplication()
         ->run();
