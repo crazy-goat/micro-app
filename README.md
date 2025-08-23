@@ -89,7 +89,7 @@ php myapp.php server start --listen=127.0.0.1 --port=8081
 - `server status` - Show the server status
 - `server connections` - Show the server connections
 
-### Routing
+## Routing
 To register a route, you must use the `#[Route]` attribute. You can provide HTTP method(s) (e.g., `GET`, `POST`) and a path.
 These parameters are directly passed to the `nikic/FastRoute`'s `addRoute` method, allowing you to define flexible and powerful routing rules.
 
