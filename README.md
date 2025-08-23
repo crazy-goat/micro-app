@@ -122,6 +122,9 @@ You can register listeners using the `onEvent()` method on your `MicroApp` insta
 
 MicroApp supports middleware to process requests before they reach your controller and to modify responses before they are sent. 
 Middlewares are classes that implement `CrazyGoat\MicroApp\Middlewares\MiddlewareInterface`.
+When registering middleware, you must provide an index. By default, the router middleware's index is 1000. 
+Middlewares with an index lower than 1000 will execute *before* the router, allowing pre-processing of the request, 
+while those with a higher index will execute *after* the router. Note that only one middleware can be registered per index. 
 
 ### Example Middleware
 
@@ -144,7 +147,7 @@ class MySimpleMiddleware implements MiddlewareInterface
 
 // Registering the middleware
 (new MicroApp())
-        ->withMiddleware(new MySimpleMiddleware())
+        ->withMiddleware(new MySimpleMiddleware(), 0)
         ->withController(new HelloWorldController())
         ->getApplication()
         ->run();
