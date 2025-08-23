@@ -175,6 +175,8 @@ class MicroApp extends Command
         }
 
         $connection->send($response);
+
+        $this->dispatcher->dispatch('onResponse', $connection, $request, $response);
         if ($this->needReload()) {
             $this->reload();
         }
