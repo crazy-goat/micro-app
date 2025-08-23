@@ -89,7 +89,8 @@ php myapp.php server start --listen=127.0.0.1 --port=8081
 
 ## Event Dispatcher
 
-MicroApp includes a simple Event Dispatcher that allows you to hook into various lifecycle events of the application. You can register listeners using the `onEvent()` method on your `MicroApp` instance.
+MicroApp includes a simple Event Dispatcher that allows you to hook into various lifecycle events of the application. 
+You can register listeners using the `onEvent()` method on your `MicroApp` instance.
 
 ### Available Events
 
@@ -106,13 +107,43 @@ MicroApp includes a simple Event Dispatcher that allows you to hook into various
 ### Example
 
 ```php
-<?php
-
 (new MicroApp())
         ->withController(new HelloWorldController())
         ->onEvent('onConnect', function (TcpConnection $connection) {
             echo "Client connected from {" . $connection->getRemoteIp() . ":" . $connection->getRemotePort() . "}\n";
         })
+        ->getApplication()
+        ->run();
+```
+
+## Middlewares
+
+MicroApp supports middleware to process requests before they reach your controller and to modify responses before they are sent. 
+Middlewares are classes that implement `CrazyGoat\MicroApp\Middlewares\MiddlewareInterface`.
+
+### Example Middleware
+
+```php
+class MySimpleMiddleware implements MiddlewareInterface
+{
+    public function process(Request $request, callable $next): Response
+    {
+        // Pre-process request
+        echo "Middleware executed before controller.\n";
+
+        $response = $next($request); // Call the next middleware or controller
+
+        // Post-process response
+        echo "Middleware executed after controller.\n";
+
+        return $response;
+    }
+}
+
+// Registering the middleware
+(new MicroApp())
+        ->withMiddleware(new MySimpleMiddleware())
+        ->withController(new HelloWorldController())
         ->getApplication()
         ->run();
 ```
