@@ -9,6 +9,8 @@ MicroApp is a minimalist PHP micro-backend framework built to run on top of the 
 - Attribute-based routes using PHP 8+ attributes
 - Symfony Console integration for easy command management
 - Configurable port, interface, and worker count
+- Event Dispatcher for custom event handling
+- Middleware Support for request/response processing
 
 ## Getting Started
 
