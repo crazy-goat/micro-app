@@ -208,9 +208,11 @@ class MicroApp extends Command
         try {
             $handler = $request->context['router']['handler'];
             if (!is_callable($handler)) {
-                throw new \RuntimeException('Handler is not callable');
+                throw new HttpException(500, 'Handler is not callable');
             }
             $response = call_user_func_array($handler, [$request]);
+        } catch (HttpException $exception) {
+            $response = $this->returnError($exception->getCode(), $exception->getMessage());
         } catch (\Throwable $exception) {
             $response = $this->returnError(500, $this->dev ? $exception->getMessage() : null);
             if ($this->reloadOnException) {
